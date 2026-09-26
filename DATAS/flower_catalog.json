@@ -1,0 +1,34 @@
+{
+  "species_list": [
+    {
+      "species": "rose",
+      "display_name_ko": "장미",
+      "colors": ["red", "white", "pink"],
+      "season": ["spring", "autumn"],
+      "price_tier": "mid",
+      "meaning": "사랑, 열정",
+      "role": "focal",
+      "avg_stem_length_cm": 40
+    },
+    {
+      "species": "carnation",
+      "display_name_ko": "카네이션",
+      "colors": ["red", "pink", "white"],
+      "season": ["spring"],
+      "price_tier": "low",
+      "meaning": "존경, 사랑",
+      "role": "focal",
+      "avg_stem_length_cm": 35
+    },
+    {
+      "species": "baby_breath",
+      "display_name_ko": "안개꽃",
+      "colors": ["white"],
+      "season": ["all"],
+      "price_tier": "low",
+      "meaning": "맑은 마음, 순수",
+      "role": "filler",
+      "avg_stem_length_cm": 30
+    }
+  ]
+}

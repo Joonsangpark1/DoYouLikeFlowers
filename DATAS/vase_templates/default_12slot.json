@@ -1,0 +1,24 @@
+{
+  "template_id": "default_12slot",
+  "description": "8개 외곽 링(focal, 장미/카네이션용) + 4개 내곽 링(filler, 안개꽃용) 고정 슬롯 템플릿",
+  "coordinate_convention": "z-up, meters, origin = 꽃병 바닥 중심 (로봇 베이스 좌표계로의 변환은 실제 배치 시 캘리브레이션 필요, 지금은 시뮬레이션 좌표계 자체가 기준)",
+  "vase": {
+    "radius_bottom_m": 0.04,
+    "radius_top_m": 0.05,
+    "height_m": 0.10
+  },
+  "slots": [
+    { "slot_id": "A0", "tier": "focal",  "target_slot": { "xyz": [0.055, 0.0, 0.09], "angle_deg": 25 } },
+    { "slot_id": "A1", "tier": "focal",  "target_slot": { "xyz": [0.0389, 0.0389, 0.09], "angle_deg": 25 } },
+    { "slot_id": "A2", "tier": "focal",  "target_slot": { "xyz": [0.0, 0.055, 0.09], "angle_deg": 25 } },
+    { "slot_id": "A3", "tier": "focal",  "target_slot": { "xyz": [-0.0389, 0.0389, 0.09], "angle_deg": 25 } },
+    { "slot_id": "A4", "tier": "focal",  "target_slot": { "xyz": [-0.055, 0.0, 0.09], "angle_deg": 25 } },
+    { "slot_id": "A5", "tier": "focal",  "target_slot": { "xyz": [-0.0389, -0.0389, 0.09], "angle_deg": 25 } },
+    { "slot_id": "A6", "tier": "focal",  "target_slot": { "xyz": [0.0, -0.055, 0.09], "angle_deg": 25 } },
+    { "slot_id": "A7", "tier": "focal",  "target_slot": { "xyz": [0.0389, -0.0389, 0.09], "angle_deg": 25 } },
+    { "slot_id": "B0", "tier": "filler", "target_slot": { "xyz": [0.01414, 0.01414, 0.13], "angle_deg": 10 } },
+    { "slot_id": "B1", "tier": "filler", "target_slot": { "xyz": [-0.01414, 0.01414, 0.13], "angle_deg": 10 } },
+    { "slot_id": "B2", "tier": "filler", "target_slot": { "xyz": [-0.01414, -0.01414, 0.13], "angle_deg": 10 } },
+    { "slot_id": "B3", "tier": "filler", "target_slot": { "xyz": [0.01414, -0.01414, 0.13], "angle_deg": 10 } }
+  ]
+}
