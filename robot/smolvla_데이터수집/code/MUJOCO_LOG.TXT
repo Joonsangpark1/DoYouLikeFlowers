@@ -1,0 +1,40 @@
+WARNING Mon Nov 16 21:16:45 2026: Attach conflict when attaching 'so101', policy is 'warning'
+timestep: parent has 0.002 (default), child has 0.005, keeping parent value
+iterations: parent has 100 (default), child has 10, keeping parent value
+ls_iterations: parent has 50 (default), child has 20, keeping parent value
+impratio: parent has 1 (default), child has 10, keeping parent value
+integrator: parent has 0 (default), child has 3, keeping parent value
+cone: parent has 0 (default), child has 1, keeping parent value
+
+WARNING Mon Nov 16 21:16:45 2026: Attaching a spec with an empty prefix may prevent the model from being saved correctly.
+
+WARNING Mon Nov 16 21:17:07 2026: Attach conflict when attaching 'so101', policy is 'warning'
+timestep: parent has 0.002 (default), child has 0.005, keeping parent value
+iterations: parent has 100 (default), child has 10, keeping parent value
+ls_iterations: parent has 50 (default), child has 20, keeping parent value
+impratio: parent has 1 (default), child has 10, keeping parent value
+integrator: parent has 0 (default), child has 3, keeping parent value
+cone: parent has 0 (default), child has 1, keeping parent value
+
+WARNING Mon Nov 16 21:17:07 2026: Attaching a spec with an empty prefix may prevent the model from being saved correctly.
+
+WARNING Mon Nov 16 21:17:43 2026: Attach conflict when attaching 'so101', policy is 'warning'
+timestep: parent has 0.002 (default), child has 0.005, keeping parent value
+iterations: parent has 100 (default), child has 10, keeping parent value
+ls_iterations: parent has 50 (default), child has 20, keeping parent value
+impratio: parent has 1 (default), child has 10, keeping parent value
+integrator: parent has 0 (default), child has 3, keeping parent value
+cone: parent has 0 (default), child has 1, keeping parent value
+
+WARNING Mon Nov 16 21:17:43 2026: Attaching a spec with an empty prefix may prevent the model from being saved correctly.
+
+WARNING Mon Nov 16 21:17:59 2026: Attach conflict when attaching 'so101', policy is 'warning'
+timestep: parent has 0.002 (default), child has 0.005, keeping parent value
+iterations: parent has 100 (default), child has 10, keeping parent value
+ls_iterations: parent has 50 (default), child has 20, keeping parent value
+impratio: parent has 1 (default), child has 10, keeping parent value
+integrator: parent has 0 (default), child has 3, keeping parent value
+cone: parent has 0 (default), child has 1, keeping parent value
+
+WARNING Mon Nov 16 21:17:59 2026: Attaching a spec with an empty prefix may prevent the model from being saved correctly.
+

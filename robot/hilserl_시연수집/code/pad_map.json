@@ -1,0 +1,37 @@
+{
+    "joy_id":  0,
+    "sticks":  {
+                   "ly":  {
+                              "axis":  "Y",
+                              "sign":  -1,
+                              "analog_seen":  true
+                          },
+                   "lx":  {
+                              "axis":  "X",
+                              "sign":  1,
+                              "analog_seen":  true
+                          },
+                   "ry":  {
+                              "axis":  "Z",
+                              "sign":  -1,
+                              "analog_seen":  true
+                          },
+                   "rx":  {
+                              "axis":  "R",
+                              "sign":  1,
+                              "analog_seen":  true
+                          }
+               },
+    "buttons":  {
+                    "rb":  32,
+                    "y":  1,
+                    "a":  4,
+                    "x":  8,
+                    "b":  2,
+                    "start":  512,
+                    "back":  256,
+                    "lb":  16,
+                    "rt":  128,
+                    "lt":  64
+                }
+}

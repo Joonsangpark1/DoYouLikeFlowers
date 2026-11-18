@@ -1,0 +1,40 @@
+#!/bin/bash
+# SmolVLA 파인튜닝. sior(RTX 5080)용. 보통 start_train.sh로 tmux에서 실행.
+# 사용: REPO_ID=... OUT_NAME=... STEPS=... BATCH=... bash train_smolvla.sh [로컬 데이터셋 폴더]
+#   기본값: parkjoonsang/flower_reach_trial2 (Hub, 비공개 -> hf auth login 필요), batch 32, 10000 step
+# 이전 버전(11-09, flower_reach 5ep, batch 8, 3000 step): train_smolvla.sh.bak_1109
+set -e
+
+REPO_ID="${REPO_ID:-parkjoonsang/flower_reach_trial2}"
+OUT_NAME="${OUT_NAME:-smolvla_trial2_$(date +%m%d_%H%M)}"
+STEPS="${STEPS:-10000}"
+BATCH="${BATCH:-32}"
+SAVE_FREQ="${SAVE_FREQ:-2000}"
+OUT_DIR="outputs/train/$OUT_NAME"
+
+ROOT_ARG=()
+if [ -n "$1" ]; then
+  if [ ! -f "$1/meta/info.json" ]; then
+    echo "데이터셋이 없음: $1"
+    exit 1
+  fi
+  ROOT_ARG=(--dataset.root="$1")
+fi
+
+echo "데이터: $REPO_ID  출력: $OUT_DIR  steps=$STEPS batch=$BATCH"
+# - smolvla_base는 카메라 키가 camera1~3이라 front 카메라를 camera1로 매핑
+# - 5080 16GB: batch 8에서 2.4GB 사용(11-09) -> batch 32 여유 있음 (추론 서버가 3GB 쓰는 중이어도 OK)
+lerobot-train \
+  --policy.path=lerobot/smolvla_base \
+  --dataset.repo_id="$REPO_ID" \
+  "${ROOT_ARG[@]}" \
+  '--rename_map={"observation.images.front": "observation.images.camera1"}' \
+  --batch_size="$BATCH" \
+  --steps="$STEPS" \
+  --save_freq="$SAVE_FREQ" \
+  --log_freq=100 \
+  --output_dir="$OUT_DIR" \
+  --job_name="$OUT_NAME" \
+  --policy.device=cuda \
+  --policy.push_to_hub=false \
+  --wandb.enable=false

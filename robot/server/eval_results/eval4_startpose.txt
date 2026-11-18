@@ -1,0 +1,29 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading  HuggingFaceTB/SmolVLM2-500M-Video-Instruct weights ...
+Loading weights:   0%|          | 0/489 [00:00<?, ?it/s]Loading weights: 100%|██████████| 489/489 [00:00<00:00, 6286.29it/s]
+Reducing the number of VLM layers to 16 ...
+Loading weights from local directory
+체크포인트: /home/sior/lerobot/outputs/train/smolvla_trial4_1117_1811/checkpoints/last/pretrained_model  (에피소드 234개 중 1개마다)  시작 상태: startpose
+
+꽃 고르기 정확도 (같은 사진 + 지시문 3개): 462/702 = 66%
+  배치 blue/rose/sunflower    blue       68/ 90  ←
+  배치 blue/rose/sunflower    rose       89/ 90  ←
+  배치 blue/rose/sunflower    sunflower  22/ 90  ←
+  배치 rose/sunflower/blue    blue       24/ 54  ←
+  배치 rose/sunflower/blue    rose       16/ 54  ←
+  배치 rose/sunflower/blue    sunflower  44/ 54  ←
+  배치 sunflower/blue/rose    blue       86/ 90  ←
+  배치 sunflower/blue/rose    rose       89/ 90  ←
+  배치 sunflower/blue/rose    sunflower  24/ 90  ←
+
+정답 지시문(시연과 같은 꽃): 203/234 = 87%
+바꾼 지시문 → 예측이 간 곳: 지시한 꽃 259 (55%)  나머지 꽃 83 (18%)  원래 에피소드 꽃 126 (27%)
+
+혼동 (지시 → 예측이 가까운 꽃):
+  rose      → rose 194  blue 1  sunflower 39
+  blue      → rose 36  blue 178  sunflower 20
+  sunflower → rose 73  blue 71  sunflower 90
+
+예측 끝 자세 ~ 지시한 꽃의 시연 끝 중심 거리: 평균 13.6° 중앙 11.8° (관절 4개 노름)
+정답 지시문 궤적 오차 (예측 묶음 vs 시연, 관절 5개 평균): 6.2°
+참고: 같은 배치 꽃끼리 시연 끝 중심 거리 18.2~38.1°
