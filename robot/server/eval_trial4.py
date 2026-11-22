@@ -25,7 +25,7 @@ from lerobot.policies.smolvla.modeling_smolvla import SmolVLAPolicy
 
 ckpt = sys.argv[1]
 stride = int(sys.argv[2]) if len(sys.argv) > 2 else 1
-root = os.path.expanduser("~/lerobot_data/parkjoonsang/flower_reach_trial4")
+root = os.path.expanduser(os.environ.get("EVAL_ROOT", "~/lerobot_data/parkjoonsang/flower_reach_trial4"))
 ds = LeRobotDataset("parkjoonsang/flower_reach_trial4", root=root)
 log = {}
 for line in open(root + "_collection_log.jsonl"):

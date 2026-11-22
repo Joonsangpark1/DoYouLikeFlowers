@@ -111,10 +111,19 @@ def main():
 
     auto = args.host == "auto"
     host = wsl_ip() if auto else args.host
-    if args.find:
-        args.index = find_camera(args.find, args.width, args.height)
-        print(f"{args.find} = index {args.index}")
-    cap = open_camera(args.index, args.width, args.height, args.fps, args.exposure)
+    # 독이 막 다시 붙은 직후엔 카메라가 아직 안 열려서 바로 실패함 (11-22) → 최대 60초 다시 시도
+    for attempt in range(30):
+        try:
+            if args.find:
+                args.index = find_camera(args.find, args.width, args.height)
+                print(f"{args.find} = index {args.index}")
+            cap = open_camera(args.index, args.width, args.height, args.fps, args.exposure)
+            break
+        except RuntimeError as e:
+            if attempt == 29:
+                raise
+            print(f"[카메라 대기] {e} -> 2초 뒤 다시", flush=True)
+            time.sleep(2)
     print(f"카메라 index {args.index} {args.width}x{args.height} 열림 -> {host}:{args.port} 로 보냄 (Ctrl+C 종료)")
     enc = [int(cv2.IMWRITE_JPEG_QUALITY), args.quality]
     try:

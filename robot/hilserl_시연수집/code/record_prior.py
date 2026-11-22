@@ -8,10 +8,11 @@ HIL-SERL prior(시연) 데이터 녹화: VLA가 꽃 앞까지 간 자세에서 �
 한 에피소드:
   1. 시작 자세(trial4 데이터 첫 프레임 평균, start_pose_vla_trial4.json)로 이동, [대기] 꽃병 놓고 Start
   2. [VLA] 서버 SmolVLA가 지시문(꽃)대로 움직임. 멈추면(관절 명령 변화가 settle-s 동안 settle-deg 미만) 끝
-     RB = 지금 바로 사람이 넘겨받기, B = 이 에피소드 취소(이상한 데로 갈 때)
+     1·2·3·4 버튼은 0.4초 꾹 눌러야 동작 (ANALOG 꺼짐/전환 때 튀는 신호 무시). 버튼 = 일반 USB 패드 기준 (pad_map.json, 1~4 = 오른쪽 버튼 번호). 시작 자세로 갈 때·START 누를 때 그리퍼를 먼저 --vla-gripper 값으로 닫고 VLA 시작
+     R1 = 지금 바로 사람이 넘겨받기, 2(B) = 이상한 데로 갈 때 취소 → VLA가 온 길을 거꾸로 되돌아가서 같은 꽃 다시
   3. [시연] 게임패드로 잡기. 이 구간만 녹화됨 (10 fps)
      왼쪽 스틱 = 앞뒤/좌우   오른쪽 스틱 위아래 = 높이   오른쪽 스틱 좌우 = 손목 회전
-     RT 닫기 / LT 열기    Y 성공 저장 / A 실패 저장 / X 버림(다시) / Back 버리고 종료
+     R2 닫기 / L2 열기    1(Y) 성공 저장 / 3(A) 실패 저장 / 4(X) 버림(다시) / 2(B) VLA가 잘못 감 → 버리고 온 길로 되돌아감 / SELECT 버리고 종료
      시간 제한(--control-time-s) 넘기면 실패로 저장
   4. 그리퍼 열고 5 cm 올린 뒤 시작 자세로 복귀
 
@@ -20,7 +21,7 @@ HIL-SERL prior(시연) 데이터 녹화: VLA가 꽃 앞까지 간 자세에서 �
   observation.images.wrist    손목 카메라 Innomaker (VLA와 같은 카메라)
   observation.images.front    고정 카메라 C270
   action                      [delta_x, delta_y, delta_z, delta_roll, gripper]  (wrist_ee.py 참고)
-  next.reward / next.done     성공(Y) 프레임 1 / 마지막 프레임 True
+  next.reward / next.done     성공(Y) 프레임 + 그 뒤 멈춘 --success-frames장(기본 15 = 1.5초) 전부 1 / 마지막 프레임 True
   complementary_info.discrete_penalty  항상 0
 에피소드마다 <repo>_collection_log.jsonl에 꽃·배치·VLA 시간·VLA 종료 자세·결과를 남김.
 
@@ -41,6 +42,7 @@ from __future__ import annotations
 import argparse
 import glob
 import json
+import shutil
 import os
 import threading
 import time
@@ -51,7 +53,7 @@ import cv2
 import numpy as np
 
 import lerobot_plugins  # noqa: F401
-from lerobot_plugins import RemoteGamepad, RemoteGamepadConfig
+from lerobot_plugins import BUTTONS, RemoteGamepad, RemoteGamepadConfig
 from net_camera import NetCamera
 from usbip_camera import MjpegServer
 from wrist_ee import ACTION_NAMES, GRIPPER_CLOSE, GRIPPER_OPEN, GRIPPER_STAY, WristEEController
@@ -70,7 +72,7 @@ TASKS = {  # record_flower_reach.sh와 글자까지 같아야 함 (VLA 지시문
     "sunflower": "Move the gripper close to the yellow sunflower.",
 }
 FLOWERS = list(TASKS)
-DEFAULT_MODEL = "/home/sior/lerobot/outputs/train/smolvla_trial4_1117_1811/checkpoints/last/pretrained_model"
+DEFAULT_MODEL = os.environ.get("FLOWER_MODEL", "/home/sior/lerobot/outputs/train/smolvla_trial4_540_hold20_aug_snoise2_1122_1802/checkpoints/last/pretrained_model")  # 다른 서버면 FLOWER_MODEL로
 MOVE_SPEED = 30.0  # 시작 자세 이동 속도 (deg/s)
 
 GREEN, RED, YELLOW, WHITE = (0, 200, 0), (0, 0, 255), (0, 220, 255), (255, 255, 255)  # BGR
@@ -94,12 +96,22 @@ def parse_args():
     p.add_argument("--num-episodes", type=int, default=30, help="이번 세션 목표 (저장된 것 기준)")
     p.add_argument("--layout", default="", help='꽃병 1·2·3번 칸 꽃, 예 "sunflower,blue,rose" (로그에만 기록)')
     p.add_argument("--fps", type=int, default=10)
-    p.add_argument("--control-time-s", type=float, default=30.0, help="시연 시간 제한")
+    p.add_argument("--control-time-s", type=float, default=60.0, help="시연 시간 제한 (11-22 사용자 요청 30 → 60초)")
     # VLA
-    p.add_argument("--server", default="100.120.78.64:8080")
+    p.add_argument("--server", default=os.environ.get("FLOWER_SERVER", "100.120.78.64:8080"))
     p.add_argument("--model", default=DEFAULT_MODEL)
     p.add_argument("--start-pose", type=Path, default=SMOLVLA_CODE / "start_pose_vla_trial4.json",
                    help="VLA 출발 자세 = trial4 첫 프레임 평균 (녹화용 start_pose.json보다 팔꿈치 +8°, 검증 66%%→92%%)")
+    p.add_argument("--vla-gripper", type=float, default=69.0,
+                   help="VLA 시작 전 그리퍼를 이 값으로 닫고 VLA 동안 고정. 0 = 끝까지 열림(약 115°), 100 = 닫힘 "
+                        "(11-22 확인). 69 = 약 35° 열림 (사용자 요청, 처음 45°=60에서 줄임). trial4 데이터는 15.4 (약 97° 열림). "
+                        "음수면 끔 (VLA 출력 그대로)")
+    p.add_argument("--vla-gripper-state", type=float, default=15.9,
+                   help="VLA에 보여 주는 그리퍼 상태값 (실제 그리퍼와 무관). trial4 학습 데이터 그리퍼 상태는 평균 15.9·표준편차 0.2라 "
+                        "실제 69(35° 열림)를 그대로 넣으면 표준편차 265배 밖 입력이 돼서 VLA가 망가짐 (11-22 확인). 음수면 실제값")
+    p.add_argument("--success-frames", type=int, default=15,
+                   help="Y(성공) 뒤 그 자리에 멈춘 채 더 녹화할 프레임 수 (전부 reward 1, 마지막만 done). "
+                        "보상 분류기 양성 사진이 에피소드당 1장뿐이던 문제 (11-22)")
     p.add_argument("--vla-min-s", type=float, default=2.0, help="이 시간 전에는 멈춤 판정 안 함")
     p.add_argument("--vla-max-s", type=float, default=15.0)
     p.add_argument("--settle-s", type=float, default=1.0)
@@ -118,8 +130,13 @@ def parse_args():
     return p.parse_args()
 
 
-def move_smooth(robot, goal: dict, fps: int = 30) -> None:
+def move_smooth(robot, goal: dict, fps: int = 30, gripper_first: bool = False) -> None:
+    """gripper_first: 그리퍼만 먼저 목표값으로 움직인 뒤 팔 이동 (11-22 사용자 요청: 닫고 나서 이동)."""
     names = list(robot.bus.motors)
+    if gripper_first and "gripper" in goal:
+        cur = robot.bus.sync_read("Present_Position")
+        move_smooth(robot, {**{n: float(cur[n]) for n in names}, "gripper": goal["gripper"]}, fps)
+        time.sleep(0.2)
     cur = robot.bus.sync_read("Present_Position")
     begin = np.array([cur[n] for n in names], dtype=float)
     end = np.array([goal[n] for n in names], dtype=float)
@@ -129,6 +146,60 @@ def move_smooth(robot, goal: dict, fps: int = 30) -> None:
         a = a * a * (3 - 2 * a)
         robot.bus.sync_write("Goal_Position", dict(zip(names, begin + a * (end - begin), strict=True)))
         time.sleep(1 / fps)
+
+
+def rewind(robot, names, history: list, q_from: np.ndarray, grip: float | None, fps: int, speed: int = 2) -> None:
+    """VLA가 엉뚱한 데로 갔을 때 (11-22 사용자 요청): VLA가 보낸 관절 명령을 거꾸로 재생해서 온 길로 되돌아감.
+    시작 자세로 바로 직선 이동하면 꽃병·줄기를 쓸고 지나갈 수 있어서. q_from = 지금 자세 (시연 중 움직였으면 먼저 VLA 끝 자세로)."""
+    if not history:
+        return
+    path = [q for _, q in history][::-1][::speed]  # speed배 빠르게
+    path = [np.asarray(q, float).copy() for q in path]
+    if grip is not None:
+        for q in path:
+            q[5] = grip
+    cur = np.asarray(q_from, float)
+    first = path[0]
+    n = max(1, int(np.abs(first - cur).max() / MOVE_SPEED * fps) + 1)
+    for i in range(1, n + 1):  # 지금 자세 → 재생 시작점 (VLA 끝 자세)
+        robot.bus.sync_write("Goal_Position", dict(zip(names, cur + i / n * (first - cur), strict=True)))
+        time.sleep(1 / fps)
+    for q in path:
+        robot.bus.sync_write("Goal_Position", dict(zip(names, q, strict=True)))
+        time.sleep(1 / fps)
+
+
+HOLD_S = 0.4  # 저장·되돌리기 버튼은 이만큼 꾹 눌러야 동작
+
+
+def held(pad: RemoteGamepad, name: str, hold_s: float = HOLD_S) -> bool:
+    """버튼을 hold_s초 이상 계속 눌렀을 때만 True (11-22).
+    일반 USB 패드는 ANALOG가 꺼져 있으면 오른쪽 스틱이 버튼 1~4로 들어오고, ANALOG를 누르는 순간에도
+    버튼 신호가 튐 → 1(성공)/3(실패)이 저절로 눌려 저장되던 문제. 순간 신호는 짧아서 걸러짐."""
+    if not pad.pop_pressed(name):
+        return False
+    t0 = time.perf_counter()
+    while time.perf_counter() - t0 < hold_s:
+        s = pad._live_state()
+        if s is None or not (int(s.get("btn", 0)) & BUTTONS[name]):
+            print(f"   ({name} 버튼이 짧게 눌림 -> 무시. {hold_s}초 꾹 누르기)")
+            return False
+        time.sleep(0.02)
+    return True
+
+
+def log_vla_fail(fail_dir: Path, rec: dict, wrist_img, front_img) -> None:
+    """VLA가 잘못 간 경우(2번 되돌리기) 기록: <repo>_vla_fail/log.jsonl + 그 순간 손목·고정 카메라 사진."""
+    fail_dir.mkdir(parents=True, exist_ok=True)
+    stem = time.strftime("%m%d_%H%M%S")
+    for tag, img in (("wrist", wrist_img), ("front", front_img)):
+        if img is not None:
+            cv2.imwrite(str(fail_dir / f"{stem}_{tag}.jpg"), cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+    rec = {**rec, "image": stem, "time": time.strftime("%Y-%m-%d %H:%M:%S")}
+    with (fail_dir / "log.jsonl").open("a") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    n = sum(1 for _ in (fail_dir / "log.jsonl").open())
+    print(f"   [VLA 실패 기록 {n}개째] {fail_dir.name}/{stem}_*.jpg")
 
 
 def read_q(robot, names) -> np.ndarray:
@@ -189,11 +260,26 @@ class Vla:
         self.history: list[tuple[float, np.ndarray]] = []
         orig_send = self.robot.send_action
 
+        grip = args.vla_gripper if args.vla_gripper >= 0 else None
+
         def send_tap(action):  # VLA가 보내는 관절 명령을 기록 (멈춤 판정용. 버스는 VLA 스레드만 씀)
+            if grip is not None:  # 사용자 요청 (11-22): VLA 동안 그리퍼를 조금 닫은 값으로 고정
+                action = {**action, "gripper.pos": grip}
             self.history.append((time.perf_counter(), np.array([action[f"{n}.pos"] for n in self.names])))
             return orig_send(action)
 
         self.robot.send_action = send_tap
+
+        orig_obs = self.robot.get_observation
+        grip_state = args.vla_gripper_state if args.vla_gripper_state >= 0 else None
+
+        def obs_tap():  # VLA 입력의 그리퍼 상태만 학습 때 값으로 (녹화는 bus.sync_read라 영향 없음)
+            o = orig_obs()
+            if grip_state is not None:
+                o["gripper.pos"] = grip_state
+            return o
+
+        self.robot.get_observation = obs_tap
 
     def load(self) -> bool:
         print(f"[VLA] 서버 {self.client.server_address} 연결 + 모델 로딩 (처음 한 번)...")
@@ -221,11 +307,11 @@ class Vla:
         while True:
             time.sleep(0.05)
             el = time.perf_counter() - t0
-            set_status(f"VLA {el:4.1f}s  RB=take over  B=cancel", YELLOW)
+            set_status(f"VLA {el:4.1f}s  R1=take over  hold 2=rewind", YELLOW)
             if pad.pop_pressed("rb"):
                 reason = "takeover"
                 break
-            if pad.pop_pressed("b"):
+            if held(pad, "b"):
                 reason = "abort"
                 break
             if not pad.is_live():
@@ -271,9 +357,18 @@ def main():
     bounds = ikcfg.get("end_effector_bounds")
     root = args.root or Path.home() / "lerobot_data" / args.repo_id
     log_path = root.parent / f"{root.name}_collection_log.jsonl"
+    vla_fail_dir = root.parent / f"{root.name}_vla_fail"  # VLA가 잘못 간 경우 기록 (11-22 사용자 요청)
     if not args.resume and root.exists():
-        raise FileExistsError(f"{root} 가 이미 있음. 이어서 하려면 --resume")
+        saved = list(root.glob("data/*/*.parquet"))
+        if saved:
+            raise FileExistsError(f"{root} 에 저장된 에피소드가 있음. 이어서 하려면 --resume")
+        # 저장된 에피소드 없이 멈춘 폴더(meta·임시 이미지만)는 지우고 새로 시작 (11-22)
+        print(f"저장된 에피소드 없는 폴더 {root} → 지우고 새로 시작")
+        shutil.rmtree(root)
+        log_path.unlink(missing_ok=True)
     start_pose = json.loads(args.start_pose.read_text())
+    if args.vla_gripper >= 0:
+        start_pose["gripper"] = args.vla_gripper  # 시작 자세로 갈 때 그리퍼 먼저 닫고(gripper_first) 팔 이동
 
     # ---- 장치 ----
     pad = RemoteGamepad(RemoteGamepadConfig(port=tcfg["port"], deadzone=tcfg["deadzone"], always_intervene=True))
@@ -324,18 +419,32 @@ def main():
         target = dataset.num_episodes + args.num_episodes
         print(f"데이터셋 {root} (기존 {dataset.num_episodes}개, 이번 목표 {args.num_episodes}개)")
         quit_all = False
+        retry_flower = None
+        analog_ok = False  # 오른쪽 스틱 아날로그 값이 한 번이라도 보이면 True (ANALOG 꺼진 채 녹화 방지)
 
         while dataset.num_episodes < target and not quit_all:
             ep = dataset.num_episodes
             # ---- 시작 자세 + 대기 ----
             set_status("MOVING TO START", YELLOW)
-            move_smooth(robot, start_pose)
+            move_smooth(robot, start_pose, gripper_first=True)
             counts = {f: sum(1 for r in log if r["flower"] == f) for f in FLOWERS}
-            flower = min(FLOWERS, key=lambda f: counts[f])  # 가장 적게 모인 꽃
+            flower = retry_flower or min(FLOWERS, key=lambda f: counts[f])  # 되돌아온 경우 같은 꽃, 아니면 가장 적게 모인 꽃
+            retry_flower = None
             pad.clear_pressed()
-            print(f"\n[대기] ep{ep}  꽃 {flower}  (모은 수 {counts})  Start=시작  LB=꽃 바꾸기  Back=종료")
+            print(f"\n[대기] ep{ep}  꽃 {flower}  (모은 수 {counts})  START=시작  L1=꽃 바꾸기  SELECT=종료")
+            if not analog_ok:
+                print("   ANALOG 확인: 패드 ANALOG 불 켜고 오른쪽 스틱을 한 번 끝까지 밀어 주세요 (확인 전엔 START 안 먹음)")
             while True:
-                set_status(f"READY ep{ep} [{flower}]  Start=go  LB=flower  Back=quit", WHITE)
+                if not analog_ok:
+                    st = pad._live_state() or {}
+                    if max(abs(float(st.get("rx", 0.0))), abs(float(st.get("ry", 0.0)))) > 0.5:
+                        analog_ok = True
+                        print("   ANALOG 확인됨")
+                if not analog_ok:
+                    set_status(f"ANALOG? turn on + move RIGHT stick  ep{ep} [{flower}]", YELLOW)
+                    pad.pop_pressed("start")  # 확인 전 START는 버림
+                else:
+                    set_status(f"READY ep{ep} [{flower}]  START=go  L1=flower  SELECT=quit", WHITE)
                 if pad.pop_pressed("back"):
                     quit_all = True
                     break
@@ -348,19 +457,34 @@ def main():
             if quit_all:
                 break
 
+            # ---- 그리퍼 먼저 닫기 (11-22 사용자 요청: Start 누르면 닫고 나서 이동) ----
+            grip_fix = args.vla_gripper if args.vla_gripper >= 0 else None
+            if grip_fix is not None:
+                set_status(f"GRIPPER -> {grip_fix:.1f}", YELLOW)
+                move_smooth(robot, {**dict(zip(names, read_q(robot, names))), "gripper": grip_fix})
+                time.sleep(0.3)  # 손목 화면에 닫힌 그리퍼가 잡힌 뒤 VLA 시작
+
             # ---- VLA ----
             print(f"[VLA] {TASKS[flower]}")
             reason, vla_s = vla.run(TASKS[flower], args, pad)
             q0 = hold_here(robot)
             print(f"   VLA 끝: {reason}, {vla_s:.1f}s")
             if reason in ("abort", "pad_lost", "error"):
-                print("   이 에피소드 취소 -> 시작 자세로")
+                print("   이 에피소드 취소 -> 온 길로 되돌아감 -> 시작 자세 (같은 꽃 다시)")
+                if reason == "abort":  # 사람이 2번으로 취소 = VLA가 잘못 가는 중
+                    log_vla_fail(vla_fail_dir, {"flower": flower, "task": TASKS[flower], "layout": args.layout,
+                                                "when": "during_vla", "vla_s": round(vla_s, 2),
+                                                "q": [round(float(v), 2) for v in q0]},
+                                 wrist.read_latest(), front.read_latest())
+                set_status("REWIND (VLA path reversed)", YELLOW)
+                rewind(robot, names, vla.history, q0, grip_fix, args.fps)
+                retry_flower = flower
                 continue
 
             # ---- 시연 녹화 ----
             ctrl.reset_from(q0)
             pad.clear_pressed()
-            print("[시연] Y 성공 / A 실패 / X 다시 / Back 버리고 종료")
+            print("[시연] (0.4초 꾹) 1 성공 / 3 실패 / 4 다시 / 2 VLA 잘못 감(되돌아가기) / SELECT 버리고 종료   그리퍼 R2 닫기 / L2 열기")
             t0 = time.perf_counter()
             result = None
             while True:
@@ -368,29 +492,47 @@ def main():
                 if pad.pop_pressed("back"):
                     quit_all = True
                     break
-                if pad.pop_pressed("x"):
+                if held(pad, "x"):
                     result = "rerecord"
+                    break
+                if held(pad, "b"):  # VLA가 잘못 간 걸 시연 중에 알았을 때: 버리고 온 길로 되돌아가서 같은 꽃 다시
+                    result = "vla_wrong"
                     break
                 state = read_q(robot, names).astype(np.float32)
                 img_w, img_f = wrist.read_latest(), front.read_latest()
                 action = pad_action(pad, tcfg)
                 q_cmd = ctrl.step(action)
                 robot.bus.sync_write("Goal_Position", dict(zip(names, q_cmd, strict=True)))
-                success, failure = pad.pop_pressed("y"), pad.pop_pressed("a")
+                success = held(pad, "y")
+                failure = not success and held(pad, "a")
                 el = time.perf_counter() - t0
                 timeout = el >= args.control_time_s
-                done = success or failure or timeout
-                dataset.add_frame({
-                    "observation.state": state,
-                    "observation.images.wrist": img_w,
-                    "observation.images.front": img_f,
-                    "action": action,
-                    "next.reward": np.array([1.0 if success else 0.0], np.float32),
-                    "next.done": np.array([done], bool),
-                    "complementary_info.discrete_penalty": np.zeros(1, np.float32),
-                    "task": TASKS[flower],
-                })
-                set_status(f"REC ep{ep} {el:4.1f}/{args.control_time_s:.0f}s  Y=ok A=fail X=redo  {ctrl.blocked}", RED)
+                done = (success and args.success_frames <= 0) or failure or timeout
+
+                def frame(st, iw, ifr, act, rew, dn):
+                    return {
+                        "observation.state": st,
+                        "observation.images.wrist": iw,
+                        "observation.images.front": ifr,
+                        "action": act,
+                        "next.reward": np.array([rew], np.float32),
+                        "next.done": np.array([dn], bool),
+                        "complementary_info.discrete_penalty": np.zeros(1, np.float32),
+                        "task": TASKS[flower],
+                    }
+
+                dataset.add_frame(frame(state, img_w, img_f, action, 1.0 if success else 0.0, done))
+                set_status(f"REC ep{ep} {el:4.1f}/{args.control_time_s:.0f}s  hold 1=ok 3=fail 4=redo 2=rewind  {ctrl.blocked}", RED)
+                if success and not done:
+                    # 성공 뒤: 그 자리에 멈춘 채(정지 액션) success_frames장 더 녹화, 전부 reward 1, 마지막만 done
+                    stay = np.array([0, 0, 0, 0, GRIPPER_STAY], dtype=np.float32)
+                    for k in range(args.success_frames):
+                        time.sleep(1 / args.fps)
+                        set_status(f"SUCCESS HOLD {k + 1}/{args.success_frames}  (don't touch)", YELLOW)
+                        robot.bus.sync_write("Goal_Position", dict(zip(names, ctrl.step(stay), strict=True)))
+                        dataset.add_frame(frame(read_q(robot, names).astype(np.float32), wrist.read_latest(),
+                                                front.read_latest(), stay, 1.0, k == args.success_frames - 1))
+                    done = True
                 if done:
                     result = "success" if success else "failure"
                     break
@@ -410,6 +552,16 @@ def main():
             else:
                 dataset.clear_episode_buffer()
                 print("   [버림]")
+            if result == "vla_wrong":
+                print("   VLA 잘못 감 -> 온 길로 되돌아감 -> 시작 자세 (같은 꽃 다시)")
+                log_vla_fail(vla_fail_dir, {"flower": flower, "task": TASKS[flower], "layout": args.layout,
+                                            "when": "after_vla", "vla_stop": reason, "vla_s": round(vla_s, 2),
+                                            "q": [round(float(v), 2) for v in q0]},  # q = VLA가 멈춘 자세
+                             wrist.read_latest(), front.read_latest())
+                set_status("REWIND (VLA path reversed)", YELLOW)
+                rewind(robot, names, vla.history, read_q(robot, names), grip_fix, args.fps)
+                retry_flower = flower
+                continue
 
             # ---- 놓고 올리기 → 시작 자세 ----
             set_status("RELEASE + LIFT", YELLOW)

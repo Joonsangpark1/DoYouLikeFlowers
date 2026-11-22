@@ -1,0 +1,45 @@
+diff --git a/src/lerobot/scripts/lerobot_train.py b/src/lerobot/scripts/lerobot_train.py
+index 0098213c..99622000 100644
+--- a/src/lerobot/scripts/lerobot_train.py
++++ b/src/lerobot/scripts/lerobot_train.py
+@@ -30,6 +30,7 @@ torchrun --nproc-per-node=8 $(which lerobot-train) \
+ 
+ import dataclasses
+ import logging
++import os
+ import sys
+ import time
+ from collections.abc import Iterator
+@@ -735,6 +736,11 @@ def train(cfg: TrainPipelineConfig):
+     for _ in range(step, cfg.steps):
+         step_start = time.perf_counter()
+         batch = next(dl_iter)
++        # (11-22 flower 패치) 관절 상태에 가우시안 노이즈 (단위 = 원래 상태 단위, 도). 배치마다 1도 미만 다른 시작 자세로
++        # 배치를 외우는 지름길을 끊어서 사진을 보게 함. FLOWER_STATE_NOISE_STD 없거나 0이면 원래 동작
++        _sn = float(os.environ.get("FLOWER_STATE_NOISE_STD", "0") or 0)
++        if _sn > 0 and "observation.state" in batch:
++            batch["observation.state"] = batch["observation.state"] + _sn * torch.randn_like(batch["observation.state"])
+         preprocessing_start = time.perf_counter()
+         train_tracker.dataloading_s = preprocessing_start - step_start
+         batch = _preprocess_dataset_batch(batch, dataset.meta.camera_keys, cfg.rename_map, preprocessor)
+diff --git a/src/lerobot/transforms/transforms.py b/src/lerobot/transforms/transforms.py
+index c1c2a937..6f17490f 100644
+--- a/src/lerobot/transforms/transforms.py
++++ b/src/lerobot/transforms/transforms.py
+@@ -646,6 +646,8 @@ class ImageTransformsConfig:
+     # By default, transforms are applied in Torchvision's suggested order (shown below).
+     # Set this to True to apply them in a random order.
+     random_order: bool = False
++    # (11-22 flower 패치) 이 확률로 사진을 증강 없이 원본 그대로 둔다. 0이면 원래 동작과 같음
++    p_original: float = 0.0
+     tfs: dict[str, ImageTransformConfig] = field(
+         default_factory=lambda: {
+             "brightness": ImageTransformConfig(
+@@ -725,4 +727,7 @@ class ImageTransforms(Transform):
+             )
+ 
+     def forward(self, *inputs: Any) -> Any:
++        p_orig = getattr(self._cfg, "p_original", 0.0)
++        if p_orig > 0 and torch.rand(1).item() < p_orig:
++            return inputs[0] if len(inputs) == 1 else inputs
+         return self.tf(*inputs)

@@ -89,6 +89,11 @@ def main():
     ap.add_argument("--roll-speed", type=float, default=90.0, help="손목 회전 최대 속도 deg/s")
     ap.add_argument("--grip-speed", type=float, default=80.0, help="그리퍼 속도 (0~100 단위/s)")
     ap.add_argument("--max-joint-step", type=float, default=6.0, help="한 스텝 관절 최대 변화 (도)")
+    ap.add_argument("--start-pose", type=Path,
+                    default=HERE.parent.parent / "smolvla_데이터수집" / "code" / "start_pose_vla_trial4.json",
+                    help="시작 때 이 자세로 먼저 이동 (11-22: 접힌 쉬는 자세는 팔꿈치가 URDF 범위 밖이라 거의 다 '못 감'). "
+                         "none이면 지금 자세 그대로")
+    ap.add_argument("--start-gripper", type=float, default=69.0, help="시작 자세로 갈 때 그리퍼 먼저 이 값으로 (69 = 약 35° 열림)")
     args = ap.parse_args()
 
     raw = json.loads(args.config.read_text())
@@ -116,6 +121,25 @@ def main():
         except Exception:
             pass
 
+    if str(args.start_pose).lower() != "none":
+        goal = json.loads(args.start_pose.read_text())
+        goal["gripper"] = args.start_gripper
+        cur = robot.bus.sync_read("Present_Position")
+        b = np.array([cur[n] for n in names], dtype=float)
+        for phase in ("gripper", "arm"):  # 그리퍼 먼저 닫고 팔 이동
+            e = b.copy()
+            e[5] = goal["gripper"]
+            if phase == "arm":
+                e = np.array([goal[n] for n in names], dtype=float)
+            steps = max(30, int(np.abs(e - b).max() / 30.0 * 30))  # 약 30도/초
+            for i in range(1, steps + 1):
+                a = i / steps
+                a = a * a * (3 - 2 * a)
+                robot.bus.sync_write("Goal_Position", dict(zip(names, b + a * (e - b))))
+                time.sleep(1 / 30)
+            b = e
+        print(f"시작 자세로 이동함: {args.start_pose.name} (그리퍼 {args.start_gripper})")
+        time.sleep(0.5)
     obs = robot.get_observation()
     q_cmd = np.array([obs[f"{n}.pos"] for n in names], dtype=float)
     p_cmd, pitch_cmd = ik.pose(q_cmd)
@@ -159,7 +183,7 @@ def main():
                 blocked = f"  [못 감: 오차 {perr * 100:.1f}cm/{aerr:.0f}°]"
             roll_cmd = float(np.clip(roll_cmd + vroll * args.roll_speed * dt, lo[4], hi[4]))
             q_cmd[4] = roll_cmd
-            grip_cmd = float(np.clip(grip_cmd + (close * -1 + open_ * 1) * args.grip_speed * dt, 0, 100))
+            grip_cmd = float(np.clip(grip_cmd + (close * 1 + open_ * -1) * args.grip_speed * dt, 0, 100))  # 100 = 닫힘 (11-22 확인)
             q_cmd[5] = grip_cmd
 
             robot.send_action({f"{n}.pos": float(v) for n, v in zip(names, q_cmd)})

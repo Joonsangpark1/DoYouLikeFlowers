@@ -75,9 +75,10 @@ class WristEEController:
             else:
                 self.blocked = f"못 감 {perr * 100:.1f}cm/{aerr:.0f}°"
         g = int(round(a[4]))
+        # 그리퍼 값: 0 = 끝까지 열림(약 115°), 100 = 닫힘 (11-22 재조립 후 손으로 닫고 열어서 확인)
         if g == GRIPPER_CLOSE:
-            q[5] -= self.grip_step
-        elif g == GRIPPER_OPEN:
             q[5] += self.grip_step
+        elif g == GRIPPER_OPEN:
+            q[5] -= self.grip_step
         q[5] = float(np.clip(q[5], 0.0, 100.0))
         return q.copy()

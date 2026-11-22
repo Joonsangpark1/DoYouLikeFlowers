@@ -18,6 +18,11 @@
 #     → trial3과 손목 회전 숫자 표현이 180° 다름. 섞지 말 것
 #   - 카메라는 Windows camera_sender_windows.py → net (30 fps, usbip는 6~7 fps)
 #   - 처음부터 섞어서 모음 (--order balanced)
+#   - 11-21: 배치 1~3(각 90, 총 270)만으로는 새 배치에서 꽃을 못 고름 (배치 암기, 11-18 실물·오프라인 검증)
+#     → 나머지 순열 배치 4~6 추가. 기존 기록과 번호가 맞도록 1~3 뒤에 붙임:
+#     배치4: 1번칸 blue / 2번칸 sunflower / 3번칸 rose
+#     배치5: 1번칸 rose / 2번칸 blue      / 3번칸 sunflower
+#     배치6: 1번칸 sunflower / 2번칸 rose / 3번칸 blue
 #
 # trial3 (2026-11-16~11-17, 183개): 그리퍼 교체 + 그리퍼만 재캘리브레이션 후 수집.
 #   꽃병 배치 3개 × 꽃 3종 × 30 = 270. 배치 다 차면 다음 배치로 바꾸라고 알림 → 꽃 바꿔 꽂고 L
@@ -47,7 +52,7 @@ echo "카메라 ${DEV_OPTS[*]:-기본값}"
 # fps 10: WSL usbip로 받는 카메라가 초당 약 11장이 한계 (2026-11-13 측정). HIL-SERL도 10fps
 exec python record_dataset.py --repo-id "${REPO_ID:-parkjoonsang/flower_reach_trial4}" --fps 10 \
   --per-layout 90 --order balanced \
-  --layouts "sunflower,blue,rose;blue,rose,sunflower;rose,sunflower,blue" \
+  --layouts "sunflower,blue,rose;blue,rose,sunflower;rose,sunflower,blue;blue,sunflower,rose;rose,blue,sunflower;sunflower,rose,blue" \
   --task "Move the gripper close to the pink rose." --flower rose \
   --task "Move the gripper close to the blue flower." --flower blue \
   --task "Move the gripper close to the yellow sunflower." --flower sunflower \
