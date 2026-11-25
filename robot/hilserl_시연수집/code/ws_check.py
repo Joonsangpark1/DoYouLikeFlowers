@@ -13,7 +13,7 @@ kin = RobotKinematics(str(HERE / ik["urdf_path"]), ik["target_frame_name"], join
 fk = lambda q: kin.forward_kinematics(np.asarray(q, float))[:3, 3]
 b = ik["end_effector_bounds"]; print("측정 bounds", b)
 
-sp = json.loads(Path("/mnt/c/Users/A/Desktop/로보틱스/smolvla_데이터수집/code/start_pose_vla_trial4.json").read_text())
+sp = json.loads((Path(__file__).resolve().parent.parent.parent / "smolvla_데이터수집/code/start_pose_vla_trial4.json").read_text())
 print("VLA 시작 자세 끝단", np.round(fk([sp[m] for m in M]), 3))
 
 root = Path.home() / "lerobot_data/parkjoonsang/flower_reach_trial4"

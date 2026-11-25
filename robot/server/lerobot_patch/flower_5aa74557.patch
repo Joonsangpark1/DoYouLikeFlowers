@@ -1,3 +1,67 @@
+diff --git a/src/lerobot/rl/learner.py b/src/lerobot/rl/learner.py
+index b694e138..40d2374c 100644
+--- a/src/lerobot/rl/learner.py
++++ b/src/lerobot/rl/learner.py
+@@ -385,6 +385,10 @@ def add_actor_information_and_train(
+     if cfg.dataset is not None:
+         dataset_repo_id = cfg.dataset.repo_id
+ 
++    # (11-24 flower 패치) 실물 경험이 FLOWER_IDLE_S초 동안 안 들어오면 업데이트를 멈춤 (쉬는 동안 같은 데이터로 단계만 쌓이는 것 방지)
++    _idle_s = float(os.environ.get("FLOWER_IDLE_S", "0") or 0)
++    _last_buf_key, _last_buf_t, _idle_logged = None, time.time(), False
++
+     # NOTE: THIS IS THE MAIN LOOP OF THE LEARNER
+     while True:
+         # Exit the training loop if shutdown is requested
+@@ -413,6 +417,20 @@ def add_actor_information_and_train(
+         if len(replay_buffer) < online_step_before_learning:
+             continue
+ 
++        if _idle_s > 0:
++            _key = (len(replay_buffer), getattr(replay_buffer, "position", 0))
++            if _key != _last_buf_key:
++                _last_buf_key, _last_buf_t = _key, time.time()
++                if _idle_logged:
++                    logging.info("[LEARNER] new transitions -> resume optimization")
++                _idle_logged = False
++            elif time.time() - _last_buf_t > _idle_s:
++                if not _idle_logged:
++                    logging.info(f"[LEARNER] no new transitions for {_idle_s:.0f}s -> pause optimization (step {algorithm.optimization_step})")
++                    _idle_logged = True
++                time.sleep(0.5)
++                continue
++
+         time_for_one_optimization_step = time.time()
+ 
+         # One training step (trainer owns data_mixer iterator; algorithm owns UTD loop)
+@@ -631,9 +649,14 @@ def save_training_checkpoint(
+     # NOTE: Handle the case where the dataset repo id is not specified in the config
+     # eg. RL training without demonstrations data
+     repo_id_buffer_save = cfg.env.task if dataset_repo_id is None else dataset_repo_id
+-    replay_buffer.to_lerobot_dataset(repo_id=repo_id_buffer_save, fps=fps, root=dataset_dir)
++    # (11-23 flower 패치) 버퍼를 데이터셋으로 저장하다 에러가 나도 학습은 계속
++    try:
++        replay_buffer.to_lerobot_dataset(repo_id=repo_id_buffer_save, fps=fps, root=dataset_dir)
++    except Exception:
++        logging.exception("[LEARNER] online buffer save failed (training continues)")
+ 
+-    if offline_replay_buffer is not None:
++    # (11-23 flower 패치) 오프라인 시연은 원본 데이터셋이 있으므로 다시 저장 안 함 (저장 중 png 없음 에러로 학습기가 꺼졌음)
++    if offline_replay_buffer is not None and os.environ.get("FLOWER_SAVE_OFFLINE", "0") == "1":
+         dataset_offline_dir = os.path.join(cfg.output_dir, "dataset_offline")
+         if os.path.exists(dataset_offline_dir) and os.path.isdir(dataset_offline_dir):
+             shutil.rmtree(dataset_offline_dir)
+@@ -852,6 +875,10 @@ def initialize_offline_replay_buffer(
+     if not cfg.resume:
+         logging.info("make_dataset offline buffer")
+         offline_dataset = make_dataset(cfg)
++    elif not os.path.exists(os.path.join(cfg.output_dir, "dataset_offline", "meta", "info.json")):
++        # (11-24 flower 패치) 이어하기인데 오프라인 버퍼 저장본이 없으면(저장 안 하게 패치함) 원본 시연 데이터셋에서 다시 만듦
++        logging.info("load offline dataset from cfg.dataset (no saved dataset_offline)")
++        offline_dataset = make_dataset(cfg)
+     else:
+         logging.info("load offline dataset")
+         dataset_offline_path = os.path.join(cfg.output_dir, "dataset_offline")
 diff --git a/src/lerobot/scripts/lerobot_train.py b/src/lerobot/scripts/lerobot_train.py
 index 0098213c..99622000 100644
 --- a/src/lerobot/scripts/lerobot_train.py

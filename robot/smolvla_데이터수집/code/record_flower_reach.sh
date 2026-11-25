@@ -8,7 +8,7 @@
 #   bash record_flower_reach.sh --resume --push private   # 끝낼 때(ESC) Hugging Face에 업로드
 #   bash record_flower_reach.sh --resume --camera /dev/video2   # 카메라 번호가 다를 때
 #
-# 저장 이름은 REPO_ID 환경변수로 바꾼다 (기본 parkjoonsang/flower_reach_trial4):
+# 저장 이름은 REPO_ID 환경변수로 바꾼다 (기본 ${FLOWER_HF_USER:-parkjoonsang}/flower_reach_trial4, FLOWER_HF_USER는 ~/.flower_env):
 #   REPO_ID=<내HF아이디>/flower_reach_<이름> bash record_flower_reach.sh
 #
 # trial4 (2026-11-17~): 처음부터 다시 수집. trial3과 다른 점:
@@ -50,7 +50,7 @@ PORT=$(ls /dev/serial/by-id/usb-1a86_* 2>/dev/null | head -1)
 [ -n "$PORT" ] && DEV_OPTS+=(--robot-port "$(readlink -f "$PORT")")
 echo "카메라 ${DEV_OPTS[*]:-기본값}"
 # fps 10: WSL usbip로 받는 카메라가 초당 약 11장이 한계 (2026-11-13 측정). HIL-SERL도 10fps
-exec python record_dataset.py --repo-id "${REPO_ID:-parkjoonsang/flower_reach_trial4}" --fps 10 \
+exec python record_dataset.py --repo-id "${REPO_ID:-${FLOWER_HF_USER:-parkjoonsang}/flower_reach_trial4}" --fps 10 \
   --per-layout 90 --order balanced \
   --layouts "sunflower,blue,rose;blue,rose,sunflower;rose,sunflower,blue;blue,sunflower,rose;rose,blue,sunflower;sunflower,rose,blue" \
   --task "Move the gripper close to the pink rose." --flower rose \

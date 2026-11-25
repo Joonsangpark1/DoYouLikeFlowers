@@ -90,7 +90,7 @@ def by_id(pattern: str, fallback: str) -> str:
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--repo-id", default="parkjoonsang/flower_hil_prior")
+    p.add_argument("--repo-id", default=os.environ.get("FLOWER_HF_USER", "parkjoonsang") + "/flower_hil_prior")
     p.add_argument("--root", type=Path, help="기본 ~/lerobot_data/<repo-id>")
     p.add_argument("--resume", action="store_true")
     p.add_argument("--num-episodes", type=int, default=30, help="이번 세션 목표 (저장된 것 기준)")
@@ -200,6 +200,17 @@ def log_vla_fail(fail_dir: Path, rec: dict, wrist_img, front_img) -> None:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     n = sum(1 for _ in (fail_dir / "log.jsonl").open())
     print(f"   [VLA 실패 기록 {n}개째] {fail_dir.name}/{stem}_*.jpg")
+
+
+LOW_VOLT = 6.6  # 이 아래면 배터리 교체 (11-22: 6.0V대에서 큰 관절 모터가 멈춤)
+
+
+def read_volt(robot) -> float | None:
+    """모터 전압 중 가장 낮은 값(V). 대기 중(VLA 스레드 멈춘 뒤)에만 부를 것. 실패하면 None."""
+    try:
+        return min(robot.bus.read("Present_Voltage", m, normalize=False) / 10 for m in robot.bus.motors)
+    except Exception:
+        return None
 
 
 def read_q(robot, names) -> np.ndarray:
@@ -431,7 +442,11 @@ def main():
             flower = retry_flower or min(FLOWERS, key=lambda f: counts[f])  # 되돌아온 경우 같은 꽃, 아니면 가장 적게 모인 꽃
             retry_flower = None
             pad.clear_pressed()
-            print(f"\n[대기] ep{ep}  꽃 {flower}  (모은 수 {counts})  START=시작  L1=꽃 바꾸기  SELECT=종료")
+            volt = read_volt(robot)
+            vtxt = "?" if volt is None else f"{volt:.1f}V"
+            print(f"\n[대기] ep{ep}  꽃 {flower}  (모은 수 {counts})  배터리 {vtxt}  START=시작  L1=꽃 바꾸기  SELECT=종료")
+            if volt is not None and volt < LOW_VOLT:
+                print(f"   ⚠️ 배터리 {volt:.1f}V < {LOW_VOLT}V -> 교체하세요 (모터가 멈출 수 있음)")
             if not analog_ok:
                 print("   ANALOG 확인: 패드 ANALOG 불 켜고 오른쪽 스틱을 한 번 끝까지 밀어 주세요 (확인 전엔 START 안 먹음)")
             while True:
@@ -441,10 +456,12 @@ def main():
                         analog_ok = True
                         print("   ANALOG 확인됨")
                 if not analog_ok:
-                    set_status(f"ANALOG? turn on + move RIGHT stick  ep{ep} [{flower}]", YELLOW)
+                    set_status(f"ANALOG? turn on + move RIGHT stick  ep{ep} [{flower}]  {vtxt}", YELLOW)
                     pad.pop_pressed("start")  # 확인 전 START는 버림
                 else:
-                    set_status(f"READY ep{ep} [{flower}]  START=go  L1=flower  SELECT=quit", WHITE)
+                    low = volt is not None and volt < LOW_VOLT
+                    set_status(f"READY ep{ep} [{flower}]  {'LOW BATTERY ' if low else ''}{vtxt}  START=go  L1=flower  SELECT=quit",
+                               RED if low else WHITE)
                 if pad.pop_pressed("back"):
                     quit_all = True
                     break

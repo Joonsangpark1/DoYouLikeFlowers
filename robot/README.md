@@ -7,6 +7,42 @@
 
 ---
 
+## ⚡ 빠른 시작 — 다른 노트북에서 바로 데이터 수집하기
+
+Windows 10/11 노트북 기준. 원 작성자 노트북과 **같은 버전**(LeRobot 커밋, Python 패키지 버전, ffmpeg)으로 자동 설치됩니다.
+
+**처음 한 번**
+
+1. 이 저장소 받기: `git clone https://github.com/Joonsangpark1/DoYouLikeFlowers.git` (또는 ZIP 받아서 풀기)
+2. `robot\install.bat` 더블클릭 → 관리자 창에서 자동 진행 (10~30분)
+   - WSL·Ubuntu가 없으면 깔고 멈춥니다 → **재부팅 → 시작 메뉴 Ubuntu에서 사용자 만들기 → install.bat 다시 실행**
+   - 중간에 묻는 것: Ubuntu 비밀번호(sudo), Hugging Face 아이디(데이터셋 이름 앞부분, 없으면 Enter), GPU 서버 주소(수집만 하면 Enter)
+3. 끝나면 점검 결과가 나옵니다. 나중에 다시 보려면 Ubuntu에서 `bash <저장소>/robot/setup/doctor.sh`
+
+| 설치되는 것 | 어디 | 버전 |
+|---|---|---|
+| WSL + Ubuntu, usbipd-win | Windows | 최신 |
+| Python 3.11 + `opencv-python-headless`, `numpy` (카메라 송신기) | Windows | `setup/requirements-windows.txt` |
+| Miniforge → conda 환경 `lerobot` (Python 3.12, ffmpeg 9) | WSL `~/miniforge3` | |
+| LeRobot `5aa74557` + `server/lerobot_patch/flower_5aa74557.patch` | WSL `~/lerobot` | extras `feetech,smolvla,async,hilserl` |
+| pip 패키지 전부 | WSL | `setup/constraints-wsl.txt` (원 작성자 환경 그대로, torch 2.11.0 등) |
+| 로봇 캘리브레이션, 설정 파일 `~/.flower_env` | WSL | 원 작성자 로봇 기준 (자기 로봇이면 3-4 참고) |
+
+**매 세션 (로봇·카메라 꽂은 뒤)**
+
+1. `robot\start_session.bat` 더블클릭 → 로봇 USB를 WSL로 연결 + 손목 카메라 송신기 켜기 + Ubuntu 창이 열리고 `setup_session.sh` 자동 실행
+   - HIL-SERL 시연(고정 카메라 C270 + 게임패드까지): PowerShell에서 `robot\start_session.bat -Mode hil`
+   - 손목 카메라가 Innomaker가 아니면: `start_session.bat -WristCam <카메라 이름 일부>`
+2. 열린 Ubuntu 창에서 녹화
+   - SmolVLA 데이터: `bash record_flower_reach.sh --resume` (처음이면 `--resume` 빼기). 자세한 키 조작은 `smolvla_데이터수집/README.md`
+   - HIL-SERL 시연: `python record_prior.py ...` (`hilserl_시연수집/README.md`, GPU 서버 필요)
+3. 데이터는 WSL `~/lerobot_data/<HF아이디>/...` 에 저장됩니다. 올리기: `hf auth login` 후 `--push private`
+
+**설정 바꾸기**: WSL `~/.flower_env` (HF 아이디 `FLOWER_HF_USER`, 서버 `FLOWER_SERVER`/`LEARNER`). 새 터미널부터 적용.
+서버(SmolVLA 추론·학습)는 원 작성자 GPU 서버를 Tailscale로 같이 쓰거나, 자기 GPU 서버에 `server/` 스크립트를 깔아서 씁니다(3-2·3-3).
+
+---
+
 ## 0. 지금 어디까지 됐나 (2026-11-22)
 
 | 단계 | 상태 |
@@ -70,7 +106,7 @@
 
 ---
 
-## 3. 설치 (처음 한 번)
+## 3. 설치 (처음 한 번) — 노트북은 위 "빠른 시작"의 install.bat이 아래를 자동으로 함. GPU 서버·수동 설치용
 
 ### 3-1. Windows
 
@@ -93,7 +129,7 @@ conda install -c conda-forge ffmpeg -y
 git clone https://github.com/huggingface/lerobot.git ~/lerobot
 cd ~/lerobot && git checkout 5aa74557
 git apply <이 저장소>/robot/server/lerobot_patch/flower_5aa74557.patch
-pip install -e ".[feetech,smolvla]"
+pip install -c <이 저장소>/robot/setup/constraints-wsl.txt -e ".[feetech,smolvla,async,hilserl]"   # 버전 고정
 pip install placo            # 노트북만: 게임패드 끝단 조종(역기구학)
 hf auth login                # Hugging Face 데이터셋을 올리거나 받을 때
 ```

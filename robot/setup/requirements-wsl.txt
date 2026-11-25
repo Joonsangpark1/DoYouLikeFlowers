@@ -1,0 +1,5 @@
+# LeRobot extras(feetech, smolvla, async, hilserl) 말고 우리 코드가 더 쓰는 것. 버전은 constraints-wsl.txt가 고정
+simplejpeg      # 카메라 송신 JPEG 디코딩 (net_camera.py)
+placo           # 게임패드 끝단 조종 역기구학 (wrist_ee.py, teleop_wrist.py)
+matplotlib
+pillow
