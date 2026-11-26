@@ -1,0 +1,13 @@
+{
+  "_설명": "모션 스테레오 설정 (11-25). board_* = 인쇄한 체커보드 안쪽 모서리 개수와 한 칸 크기(m, 자로 재서 고칠 것). tcp_offset_m = gripper_frame_link 기준 그리퍼 중심(집게 사이 줄기 들어갈 점) 오프셋, 자로 재서 고칠 것",
+  "camera_port": 5558,
+  "board_cols": 9,
+  "board_rows": 6,
+  "board_square_m": 0.020,
+  "baseline_m": 0.04,
+  "tcp_offset_m": [0.0, 0.0, 0.0],
+  "approach_back_m": 0.05,
+  "max_step_deg": 10.0,
+  "settle_s": 0.6,
+  "ik_tol_m": 0.005
+}

@@ -391,3 +391,34 @@ python check_demos.py
 - **검증**: 실제 로봇 없이 가짜 로봇 + 스크립트 게임패드로 성공(Y)/다시(X)/실패(A)/시간 초과/종료(Back)/이어서 녹화를 끝까지 돌려서
   저장 형식, 보상 위치, 스틱 방향(왼쪽 스틱 위 → +x, 오른쪽 → −y, 오른쪽 스틱 위 → +z), 그리퍼(RT → 100)를 확인함.
   **실제 로봇·실제 게임패드로는 아직 안 돌려봄** → 첫 실행 때 2-3장 게임패드 확인과 로봇 방향 확인을 꼭 할 것.
+
+## 전시 시연 (11-27): end-to-end 실행기 + 관람객 게임
+
+### A. 자동 시연 — `code/flower_demo_e2e.py`
+학습기·사람 버튼 없이 학습된 뽑기 정책(`policies/pull_13769`, 11-27 혼자 성공 81%)으로 한 송이씩:
+둘러보기(YOLO) → IK로 칸 접근 → 정책으로 잡고 뽑기 → IK로 통에 넣기.
+
+1. **Windows PowerShell** (`code` 폴더): 카메라·패드 송신기 (켜져 있으면 생략)
+   ```powershell
+   Start-Process powershell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File sender_keepalive.ps1 -SenderArgs "--find innomaker"'
+   Start-Process powershell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File sender_keepalive.ps1 -SenderArgs "--find c270 --port 5559 --exposure -5"'
+   ```
+2. **WSL** (`code` 폴더, conda `lerobot`):
+   ```bash
+   python flower_demo_e2e.py                               # rose → blue → sunflower 한 바퀴, Enter로 시작
+   python flower_demo_e2e.py --rounds 3                    # 3바퀴 (바퀴마다 꽃 다시 꽂고 Enter)
+   python flower_demo_e2e.py --layout sunflower,rose,blue  # 둘러보기 생략
+   python flower_demo_e2e.py --pad                         # 패드 1 꾹 성공 / 2 꾹 실패 / SELECT 멈춤
+   ```
+   미리보기 http://localhost:8080 , 기록 `~/lerobot_data/parkjoonsang/flower_demo_episodes.jsonl`.
+   주의: 그리퍼 값으로 쥠/빈손 구분이 안 돼서 '8.5 cm 이상 들고 그리퍼 닫는 중'이면 뽑은 것으로 보고 통에 넣음. **정면 C270 위치를 학습 때와 같게** 둘 것.
+
+### B. 관람객 게임 — `code/exhibition_game/` (꽃순이 60초 꽃 잡기 챌린지 V4)
+자세한 건 `code/exhibition_game/README.md`. 브라우저 http://localhost:8091 (F11 전체화면), 관리자 PIN은 서버 터미널에 표시.
+```bash
+cd code/exhibition_game
+python flower_game.py --ui-test                       # 화면만 (로봇·패드 없이)
+python flower_game.py                                 # DEMO: 패드만 (Windows 패드 송신기 켠 뒤)
+python flower_game.py --real --confirm-supervisor     # REAL: WSL에서 실제 로봇 (안전 확인·감독자 필수)
+```
+**시연(A)과 게임(B)은 같은 로봇·카메라를 쓰므로 동시에 켜지 말 것.**

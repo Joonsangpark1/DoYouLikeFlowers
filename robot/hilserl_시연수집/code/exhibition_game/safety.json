@@ -1,0 +1,15 @@
+{
+  "verified": false,
+  "workspace": {
+    "min": null,
+    "max": null
+  },
+  "joint_limits": {
+    "shoulder_pan": null,
+    "shoulder_lift": null,
+    "elbow_flex": null,
+    "wrist_flex": null,
+    "wrist_roll": null,
+    "gripper": null
+  }
+}

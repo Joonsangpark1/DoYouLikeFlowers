@@ -62,6 +62,8 @@ class NetCamera:
                 if not self._running:
                     return None
                 continue
+            except OSError:  # 11-25: 송신기를 강제로 끄면 ConnectionResetError → 예전엔 스레드가 죽어 다시 연결을 못 받음
+                return None
             if not chunk:
                 return None
             buf += chunk
@@ -74,7 +76,10 @@ class NetCamera:
             try:
                 conn, _ = self._server.accept()
             except OSError:
-                return
+                if not self._running or self._server is None:
+                    return
+                time.sleep(0.2)
+                continue
             conn.settimeout(1.0)
             print(f"[{self}] Windows 송신기 연결됨", flush=True)
             with conn:
@@ -109,6 +114,20 @@ class NetCamera:
         if age > max_age_ms:
             raise TimeoutError(f"{self} 마지막 사진이 {age:.0f}ms 전 (최대 {max_age_ms}ms)")
         return frame
+
+    def read_fresh(self, max_age_ms: int = 500, wait_s: float = 15.0) -> np.ndarray:
+        """read_latest와 같지만 송신기가 다시 붙는 동안(독 리셋·송신기 재시작) 최대 wait_s 기다림 (11-25)"""
+        deadline, warned = time.time() + wait_s, False
+        while True:
+            try:
+                return self.read_latest(max_age_ms)
+            except (RuntimeError, TimeoutError):
+                if time.time() > deadline:
+                    raise
+                if not warned:
+                    print(f"[{self}] 사진이 끊김 -> 송신기 다시 붙기를 기다리는 중 (최대 {wait_s:.0f}초)", flush=True)
+                    warned = True
+                time.sleep(0.1)
 
     def async_read(self, timeout_ms: float = 200) -> np.ndarray:
         self._new.clear()

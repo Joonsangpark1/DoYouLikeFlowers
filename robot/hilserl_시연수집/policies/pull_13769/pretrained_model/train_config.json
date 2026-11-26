@@ -1,0 +1,606 @@
+{
+    "dataset": {
+        "repo_id": "parkjoonsang/flower_pull2_prior",
+        "repo_type": "dataset",
+        "root": "/home/sior/lerobot_data/parkjoonsang/flower_pull2_prior",
+        "episodes": null,
+        "exclude_episodes": null,
+        "image_transforms": {
+            "enable": false,
+            "max_num_transforms": 3,
+            "random_order": false,
+            "p_original": 0.0,
+            "tfs": {
+                "brightness": {
+                    "weight": 1.0,
+                    "type": "ColorJitter",
+                    "kwargs": {
+                        "brightness": [
+                            0.8,
+                            1.2
+                        ]
+                    }
+                },
+                "contrast": {
+                    "weight": 1.0,
+                    "type": "ColorJitter",
+                    "kwargs": {
+                        "contrast": [
+                            0.8,
+                            1.2
+                        ]
+                    }
+                },
+                "saturation": {
+                    "weight": 1.0,
+                    "type": "ColorJitter",
+                    "kwargs": {
+                        "saturation": [
+                            0.5,
+                            1.5
+                        ]
+                    }
+                },
+                "hue": {
+                    "weight": 1.0,
+                    "type": "ColorJitter",
+                    "kwargs": {
+                        "hue": [
+                            -0.05,
+                            0.05
+                        ]
+                    }
+                },
+                "sharpness": {
+                    "weight": 1.0,
+                    "type": "SharpnessJitter",
+                    "kwargs": {
+                        "sharpness": [
+                            0.5,
+                            1.5
+                        ]
+                    }
+                },
+                "affine": {
+                    "weight": 1.0,
+                    "type": "RandomAffine",
+                    "kwargs": {
+                        "degrees": [
+                            -5.0,
+                            5.0
+                        ],
+                        "translate": [
+                            0.05,
+                            0.05
+                        ]
+                    }
+                }
+            }
+        },
+        "revision": null,
+        "use_imagenet_stats": false,
+        "video_backend": "torchcodec",
+        "return_uint8": false,
+        "depth_output_unit": "mm",
+        "streaming": false,
+        "eval_split": 0.0
+    },
+    "env": {
+        "type": "gym_manipulator",
+        "task": "pull the flower stem out of the vase",
+        "fps": 10,
+        "features": {
+            "observation.images.wrist": {
+                "type": "VISUAL",
+                "shape": [
+                    3,
+                    128,
+                    128
+                ]
+            },
+            "observation.state": {
+                "type": "STATE",
+                "shape": [
+                    6
+                ]
+            },
+            "action": {
+                "type": "ACTION",
+                "shape": [
+                    3
+                ]
+            },
+            "observation.images.front": {
+                "type": "VISUAL",
+                "shape": [
+                    3,
+                    128,
+                    128
+                ]
+            }
+        },
+        "features_map": {
+            "observation.images.wrist": "observation.images.wrist",
+            "observation.state": "observation.state",
+            "action": "action",
+            "observation.images.front": "observation.images.front"
+        },
+        "max_parallel_tasks": 1,
+        "disable_env_checker": true,
+        "robot": null,
+        "teleop": null,
+        "processor": {
+            "control_mode": "gamepad",
+            "observation": null,
+            "image_preprocessing": null,
+            "gripper": null,
+            "reset": null,
+            "inverse_kinematics": null,
+            "reward_classifier": null,
+            "max_gripper_pos": 100.0
+        },
+        "name": "real_robot"
+    },
+    "policy": {
+        "type": "gaussian_actor",
+        "n_obs_steps": 1,
+        "input_features": {
+            "observation.images.wrist": {
+                "type": "VISUAL",
+                "shape": [
+                    3,
+                    128,
+                    128
+                ]
+            },
+            "observation.state": {
+                "type": "STATE",
+                "shape": [
+                    6
+                ]
+            },
+            "observation.images.front": {
+                "type": "VISUAL",
+                "shape": [
+                    3,
+                    128,
+                    128
+                ]
+            }
+        },
+        "output_features": {
+            "action": {
+                "type": "ACTION",
+                "shape": [
+                    3
+                ]
+            }
+        },
+        "device": "cuda",
+        "use_amp": false,
+        "use_peft": false,
+        "push_to_hub": false,
+        "repo_id": null,
+        "private": null,
+        "tags": null,
+        "license": null,
+        "pretrained_path": null,
+        "pretrained_revision": null,
+        "normalization_mapping": {
+            "VISUAL": "MEAN_STD",
+            "STATE": "MIN_MAX",
+            "ENV": "MIN_MAX",
+            "ACTION": "MIN_MAX"
+        },
+        "dataset_stats": {
+            "observation.images.wrist": {
+                "mean": [
+                    0.485,
+                    0.456,
+                    0.406
+                ],
+                "std": [
+                    0.229,
+                    0.224,
+                    0.225
+                ]
+            },
+            "observation.state": {
+                "min": [
+                    -40.0,
+                    -100.0,
+                    -80.0,
+                    -60.0,
+                    -120.0,
+                    0.0
+                ],
+                "max": [
+                    100.0,
+                    40.0,
+                    100.0,
+                    110.0,
+                    60.0,
+                    100.0
+                ]
+            },
+            "action": {
+                "min": [
+                    -1.0,
+                    -1.0,
+                    -1.0
+                ],
+                "max": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            },
+            "observation.images.front": {
+                "mean": [
+                    0.485,
+                    0.456,
+                    0.406
+                ],
+                "std": [
+                    0.229,
+                    0.224,
+                    0.225
+                ]
+            }
+        },
+        "storage_device": "cpu",
+        "vision_encoder_name": "lerobot/resnet10",
+        "freeze_vision_encoder": true,
+        "image_encoder_hidden_dim": 32,
+        "shared_encoder": true,
+        "num_discrete_actions": 2,
+        "image_embedding_pooling_dim": 8,
+        "state_encoder_hidden_dim": 256,
+        "latent_dim": 64,
+        "online_steps": 1000000,
+        "online_buffer_capacity": 30000,
+        "offline_buffer_capacity": 20000,
+        "async_prefetch": false,
+        "online_step_before_learning": 100,
+        "actor_learner_config": {
+            "learner_host": "0.0.0.0",
+            "learner_port": 50051,
+            "policy_parameters_push_frequency": 4,
+            "queue_get_timeout": 2.0
+        },
+        "concurrency": {
+            "actor": "threads",
+            "learner": "threads",
+            "multiprocessing_context": "spawn"
+        },
+        "actor_network_kwargs": {
+            "hidden_dims": [
+                256,
+                256
+            ],
+            "activate_final": true
+        },
+        "policy_kwargs": {
+            "use_tanh_squash": true,
+            "std_min": -5.0,
+            "std_max": 2.0,
+            "init_final": 0.05
+        },
+        "discrete_critic_network_kwargs": {
+            "hidden_dims": [
+                256,
+                256
+            ],
+            "activate_final": true,
+            "final_activation": null
+        }
+    },
+    "reward_model": null,
+    "output_dir": "/home/sior/lerobot/outputs/rl/flower_pull2_1126_1424",
+    "job_name": "flower_pull2_1126_1424",
+    "resume": true,
+    "seed": 1000,
+    "cudnn_deterministic": false,
+    "num_workers": 4,
+    "batch_size": 256,
+    "prefetch_factor": 4,
+    "persistent_workers": true,
+    "dataloader_multiprocessing_context": "spawn",
+    "steps": 100000,
+    "env_eval_freq": 20000,
+    "log_freq": 100,
+    "eval_steps": 0,
+    "max_eval_samples": 0,
+    "tolerance_s": 0.0001,
+    "save_checkpoint": true,
+    "save_freq": 2000,
+    "checkpoint_format": "safetensors",
+    "use_policy_training_preset": true,
+    "optimizer": {
+        "type": "multi_adam",
+        "lr": 0.001,
+        "weight_decay": 0.0,
+        "grad_clip_norm": 10.0,
+        "optimizer_groups": {
+            "actor": {
+                "lr": 0.0003
+            },
+            "critic": {
+                "lr": 0.0003
+            },
+            "temperature": {
+                "lr": 0.0003
+            }
+        }
+    },
+    "scheduler": null,
+    "parallelism": {
+        "dp_replicate": 1,
+        "dp_shard": 1,
+        "context_parallel": {
+            "ring_degree": 1,
+            "ulysses_degree": 1
+        },
+        "cfg_parallel": 1
+    },
+    "accelerator": {
+        "mixed_precision": "no",
+        "gradient_accumulation": {
+            "steps": 1
+        },
+        "fsdp": {
+            "reshard_after_forward": true,
+            "wrap_modules": null,
+            "min_num_params": null,
+            "cpu_offload": false,
+            "ignored_modules": null
+        },
+        "ddp": {
+            "find_unused_parameters": true,
+            "gradient_as_bucket_view": false,
+            "static_graph": false
+        },
+        "compile": {
+            "enabled": false,
+            "backend": "inductor",
+            "mode": null,
+            "regional": true
+        },
+        "activation_checkpointing": {
+            "mode": "none"
+        }
+    },
+    "eval": {
+        "n_episodes": 50,
+        "batch_size": 16,
+        "use_async_envs": true,
+        "recording": false,
+        "recording_repo_id": null,
+        "recording_private": false
+    },
+    "ema": {
+        "enable": false,
+        "decay": null,
+        "update_after_step": 0,
+        "inv_gamma": 1.0,
+        "power": 0.75,
+        "min_decay": 0.0,
+        "max_decay": 0.9999,
+        "use_for_eval": true
+    },
+    "wandb": {
+        "enable": false,
+        "disable_artifact": true,
+        "project": "flower_hil",
+        "entity": null,
+        "notes": null,
+        "run_id": null,
+        "resume": null,
+        "mode": null,
+        "console": "wrap",
+        "console_multipart": false,
+        "console_chunk_max_seconds": 0,
+        "add_tags": true
+    },
+    "peft": null,
+    "job": {
+        "target": null,
+        "image": "huggingface/lerobot-gpu:latest",
+        "timeout": "2d",
+        "detach": false,
+        "tags": []
+    },
+    "save_checkpoint_to_hub": false,
+    "sample_weighting": null,
+    "rename_map": {},
+    "checkpoint_path": null,
+    "algorithm": {
+        "type": "sac",
+        "actor_lr": 0.0003,
+        "critic_lr": 0.0003,
+        "temperature_lr": 0.0003,
+        "discount": 0.99,
+        "use_backup_entropy": true,
+        "critic_target_update_weight": 0.005,
+        "num_critics": 2,
+        "num_subsample_critics": null,
+        "critic_network_kwargs": {
+            "hidden_dims": [
+                256,
+                256
+            ],
+            "activate_final": true,
+            "final_activation": null
+        },
+        "discrete_critic_network_kwargs": {
+            "hidden_dims": [
+                256,
+                256
+            ],
+            "activate_final": true,
+            "final_activation": null
+        },
+        "temperature_init": 0.01,
+        "target_entropy": null,
+        "utd_ratio": 2,
+        "policy_update_freq": 1,
+        "grad_clip_norm": 10.0,
+        "use_torch_compile": false,
+        "policy_config": {
+            "type": "gaussian_actor",
+            "n_obs_steps": 1,
+            "input_features": {
+                "observation.images.wrist": {
+                    "type": "VISUAL",
+                    "shape": [
+                        3,
+                        128,
+                        128
+                    ]
+                },
+                "observation.state": {
+                    "type": "STATE",
+                    "shape": [
+                        6
+                    ]
+                },
+                "observation.images.front": {
+                    "type": "VISUAL",
+                    "shape": [
+                        3,
+                        128,
+                        128
+                    ]
+                }
+            },
+            "output_features": {
+                "action": {
+                    "type": "ACTION",
+                    "shape": [
+                        3
+                    ]
+                }
+            },
+            "device": "cuda",
+            "use_amp": false,
+            "use_peft": false,
+            "push_to_hub": false,
+            "repo_id": null,
+            "private": null,
+            "tags": null,
+            "license": null,
+            "pretrained_path": null,
+            "pretrained_revision": null,
+            "normalization_mapping": {
+                "VISUAL": "MEAN_STD",
+                "STATE": "MIN_MAX",
+                "ENV": "MIN_MAX",
+                "ACTION": "MIN_MAX"
+            },
+            "dataset_stats": {
+                "observation.images.wrist": {
+                    "mean": [
+                        0.485,
+                        0.456,
+                        0.406
+                    ],
+                    "std": [
+                        0.229,
+                        0.224,
+                        0.225
+                    ]
+                },
+                "observation.state": {
+                    "min": [
+                        -40.0,
+                        -100.0,
+                        -80.0,
+                        -60.0,
+                        -120.0,
+                        0.0
+                    ],
+                    "max": [
+                        100.0,
+                        40.0,
+                        100.0,
+                        110.0,
+                        60.0,
+                        100.0
+                    ]
+                },
+                "action": {
+                    "min": [
+                        -1.0,
+                        -1.0,
+                        -1.0
+                    ],
+                    "max": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ]
+                },
+                "observation.images.front": {
+                    "mean": [
+                        0.485,
+                        0.456,
+                        0.406
+                    ],
+                    "std": [
+                        0.229,
+                        0.224,
+                        0.225
+                    ]
+                }
+            },
+            "storage_device": "cpu",
+            "vision_encoder_name": "lerobot/resnet10",
+            "freeze_vision_encoder": true,
+            "image_encoder_hidden_dim": 32,
+            "shared_encoder": true,
+            "num_discrete_actions": 2,
+            "image_embedding_pooling_dim": 8,
+            "state_encoder_hidden_dim": 256,
+            "latent_dim": 64,
+            "online_steps": 1000000,
+            "online_buffer_capacity": 30000,
+            "offline_buffer_capacity": 20000,
+            "async_prefetch": false,
+            "online_step_before_learning": 100,
+            "actor_learner_config": {
+                "learner_host": "0.0.0.0",
+                "learner_port": 50051,
+                "policy_parameters_push_frequency": 4,
+                "queue_get_timeout": 2.0
+            },
+            "concurrency": {
+                "actor": "threads",
+                "learner": "threads",
+                "multiprocessing_context": "spawn"
+            },
+            "actor_network_kwargs": {
+                "hidden_dims": [
+                    256,
+                    256
+                ],
+                "activate_final": true
+            },
+            "policy_kwargs": {
+                "use_tanh_squash": true,
+                "std_min": -5.0,
+                "std_max": 2.0,
+                "init_final": 0.05
+            },
+            "discrete_critic_network_kwargs": {
+                "hidden_dims": [
+                    256,
+                    256
+                ],
+                "activate_final": true,
+                "final_activation": null
+            }
+        }
+    },
+    "mixer": "online_offline",
+    "online_ratio": 0.5
+}

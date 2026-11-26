@@ -1,0 +1,5 @@
+pad_map.json
+*.sqlite3
+*.sqlite3-*
+*.csv
+__pycache__/

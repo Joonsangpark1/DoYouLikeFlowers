@@ -1,0 +1,32 @@
+{
+  "_설명": "11-25 꽃병 위치 고정 (호 3구 꽃병 flower_holder_arc3, 도면대로: 로봇 베이스 = 호 중심, 구멍 반지름 250 mm, 칸 사이 19.6°, 간격 85 mm). 칸 k 줄기 = (arc_center_x + R cos θk, R sin θk, z). 1번 칸 = 로봇 왼쪽(+y). 세 꽃이 한 화면에 안 들어오므로 배치는 둘러보기(어깨 −15/0/+15°, observer_look.py)로 판단 | 11-25 실측: 사용자는 어깨 회전축 기준 250 mm. URDF base_link 원점은 회전축보다 38.8 mm 뒤(shoulder_pan 관절 원점 x=0.0388) → arc_center_x_m=0.0388",
+  "arc_radius_m": 0.25,
+  "arc_center_x_m": 0.0388,
+  "angles_deg": {
+    "1": 19.6,
+    "2": 0.0,
+    "3": -19.6
+  },
+  "grasp_z_m": 0.11,
+  "pre_back_m": 0.03,
+  "tcp_correction_m": {
+    "forward": 0.02,
+    "left": 0.01,
+    "up": 0.0
+  },
+  "_tcp_correction_설명": "11-25 slot_check 2번 칸 실측: 집게 가운데가 목표보다 2 cm 덜 가고 1 cm 오른쪽 → 칸 방향 기준(forward = 회전축→줄기, left = 그 왼쪽 수직, up = 위) 보정. 칸 1·3에서도 맞는지 확인할 것",
+  "slot_correction_m": {
+    "1": {
+      "forward": 0.01,
+      "left": 0.0,
+      "up": 0.02
+    },
+    "3": {
+      "forward": 0.01,
+      "left": 0.0,
+      "up": 0.02
+    }
+  },
+  "_slot_correction_설명": "11-25 실측: 1·3번 칸은 2번 기준 보정 뒤에도 2 cm 낮고 1 cm 덜 감 → 칸별 추가 보정 (전체 tcp_correction_m 위에 더함)",
+  "far_back_m": 0.08
+}
